@@ -76,6 +76,10 @@ type testConfigRequiredDefault struct {
 	RequiredDefault string `env:"TEST_REQUIRED_DEFAULT,required,default=test"`
 }
 
+type testConfigRequiredIgnoreOnEnvs struct {
+	RequiredIgnoreOnEnvs string `env:"TEST_REQUIRED_IGNORE_ON_ENVS,required,ignore_on_envs=test|local"`
+}
+
 type testNoExportedFields struct {
 	aString  string  `env:"TEST_STRING"`
 	anInt64  int64   `env:"TEST_INT64"`
@@ -362,6 +366,27 @@ func TestDecodeErrors(t *testing.T) {
 	}()
 	err = Decode(&tcrd)
 	t.Fatal("This should not have been reached. A panic should have occured.")
+
+	os.Setenv("ENV", "test")  // Set env to 'test', which should ignore the requirement error.
+	var tcrioe1 testConfigRequiredIgnoreOnEnvs
+	err = Decode(&tcrioe1)
+	if err != nil {
+		t.Fatal("Should not have gotten requirement error -- currently on test environment, where this should be ignored.")
+	}
+
+	os.Setenv("ENV", "prod")
+	var tcrioe2 testConfigRequiredIgnoreOnEnvs
+	err = Decode(&tcrioe2)
+	if err == nil {
+		t.Fatal("Should have gotten requirement error.")
+	}
+
+	os.Setenv("TEST_REQUIRED_IGNORE_ON_ENVS", "some value")
+	var tcrioe3 testConfigRequiredIgnoreOnEnvs
+	err = Decode(&tcrioe3)
+	if err != nil {
+		t.Fatal("Should not have errored -- env TEST_REQUIRED_IGNORE_ON_ENVS has value.")
+	}
 }
 
 func TestOnlyNested(t *testing.T) {

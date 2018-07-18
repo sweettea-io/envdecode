@@ -90,6 +90,9 @@ func StrictDecode(target interface{}) error {
 }
 
 func decode(target interface{}, strict bool) (int, error) {
+	// Get current environment tier.
+	envTier := os.Getenv("ENV")
+
 	s := reflect.ValueOf(target)
 	if s.Kind() != reflect.Ptr || s.IsNil() {
 		return 0, ErrInvalidTarget
@@ -148,6 +151,7 @@ func decode(target interface{}, strict bool) (int, error) {
 		env := os.Getenv(parts[0])
 
 		required := false
+		envTierIgnore := false
 		hasDefault := false
 		defaultValue := ""
 
@@ -155,10 +159,16 @@ func decode(target interface{}, strict bool) (int, error) {
 			if !required {
 				required = strings.HasPrefix(o, "required")
 			}
+
+			if envTier != "" && strings.HasPrefix(o, "ignore_on_envs=") {
+				envTierIgnore = stringInSlice(envTier, strings.Split(o[14:], "|"))
+			}
+
 			if strings.HasPrefix(o, "default=") {
 				hasDefault = true
 				defaultValue = o[8:]
 			}
+
 			if !strict {
 				strict = strings.HasPrefix(o, "strict")
 			}
@@ -167,12 +177,15 @@ func decode(target interface{}, strict bool) (int, error) {
 		if required && hasDefault {
 			panic(`envdecode: "default" and "required" may not be specified in the same annotation`)
 		}
-		if env == "" && required {
+
+		if env == "" && required && !envTierIgnore {
 			return 0, fmt.Errorf("the environment variable \"%s\" is missing", parts[0])
 		}
+
 		if env == "" {
 			env = defaultValue
 		}
+
 		if env == "" {
 			continue
 		}
@@ -414,4 +427,14 @@ func Export(target interface{}) ([]*ConfigInfo, error) {
 	sort.Sort(ConfigInfoSlice(cfg))
 
 	return cfg, nil
+}
+
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+
+	return false
 }
