@@ -160,8 +160,8 @@ func decode(target interface{}, strict bool) (int, error) {
 				required = strings.HasPrefix(o, "required")
 			}
 
-			if envTier != "" && strings.HasPrefix(o, "ignore_on_envs=") {
-				envTierIgnore = stringInSlice(envTier, strings.Split(o[14:], "|"))
+			if !envTierIgnore && envTier != "" && strings.HasPrefix(o, "ignore_on_envs=") {
+				envTierIgnore = stringInSlice(envTier, strings.Split(o[15:], "|"))
 			}
 
 			if strings.HasPrefix(o, "default=") {
